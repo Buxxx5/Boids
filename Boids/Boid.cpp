@@ -1,5 +1,6 @@
 #include <random>
 #include <iostream>
+#include <thread>
 #include "Boid.h"
 #include "Constants.h"
 #include "VectorMath.h"
@@ -34,7 +35,7 @@ sf::Vector2f Boid::Cohesion(std::vector<Boid> otherBoids)
 	int numberOfBoids = 0;
 
 	for (Boid boid : otherBoids) {
-		if (IsInRange(boid)) {
+		if (IsInRange(boid, COHESION_RANGE)) {
 			sf::Vector2f boidPos = boid.GetShape().getPosition();
 			x += boidPos.x;
 			y += boidPos.y;
@@ -47,7 +48,7 @@ sf::Vector2f Boid::Cohesion(std::vector<Boid> otherBoids)
 		cohesionDirection = middlePoint - shape.getPosition();
 
 	}
-	return cohesionDirection;
+	return cohesionDirection - direction;
 }
 
 sf::Vector2f Boid::Alignment(std::vector<Boid> otherBoids)
@@ -55,7 +56,7 @@ sf::Vector2f Boid::Alignment(std::vector<Boid> otherBoids)
 	sf::Vector2f alignmentVector;
 	int neighbors = 0;
 	for (Boid otherBoid : otherBoids) {
-		if (IsInRange(otherBoid)) {
+		if (IsInRange(otherBoid, ALIGNMENT_RANGE)) {
 			alignmentVector += otherBoid.GetDirection();
 			neighbors++;
 		}
@@ -70,7 +71,19 @@ sf::Vector2f Boid::Alignment(std::vector<Boid> otherBoids)
 
 sf::Vector2f Boid::Separation(std::vector<Boid> otherBoids)
 {
-	return sf::Vector2f(0, 0);
+	sf::Vector2f separationDirection(0.f, 0.f);
+
+	for (Boid boid : otherBoids) {
+		if (IsInRange(boid, SEPARATION_RANGE)) {
+			sf::Vector2f boidPos = boid.GetShape().getPosition();
+			sf::Vector2f sepContribution = boidPos - shape.getPosition();
+			sepContribution = sepContribution * (1 / magnitude(sepContribution));
+			separationDirection += sepContribution;
+		}
+	}
+
+	return direction - separationDirection;
+
 }
 
 sf::Vector2f Boid::GetDirection()
@@ -81,9 +94,9 @@ sf::Vector2f Boid::GetDirection()
 void Boid::DefineDirection(std::vector<Boid> otherBoids)
 {
 
-	acceleration = Cohesion(otherBoids) * COHESION_STRENGTH;
-	acceleration += Alignment(otherBoids) * ALIGNMENT_STRENGTH;
-	acceleration += Separation(otherBoids) * SEPARATION_STRENGTH;
+	acceleration = normalized(Cohesion(otherBoids)) * COHESION_STRENGTH;
+	acceleration += normalized(Alignment(otherBoids)) * ALIGNMENT_STRENGTH;
+	acceleration += normalized(Separation(otherBoids)) * SEPARATION_STRENGTH;
 
 
 	direction += acceleration;
@@ -115,7 +128,7 @@ void Boid::Move(float _delta)
 	shape.setPosition(newPos);
 }
 
-bool Boid::IsInRange(Boid otherBoid)
+bool Boid::IsInRange(Boid otherBoid, float range)
 {
 	// (x - center_x)^2 + (y - center_y)^2 < radius^2
 
@@ -126,7 +139,7 @@ bool Boid::IsInRange(Boid otherBoid)
 	sf::Vector2f otherPosition = otherBoid.GetShape().getPosition();
 	float baseX = otherPosition.x - shape.getPosition().x;
 	float baseY = otherPosition.y - shape.getPosition().y;
-	bool result = std::pow(baseX, 2.f) + std::pow(baseY, 2.f) < std::pow((float)COHESION_RANGE, 2.f);
+	bool result = std::pow(baseX, 2.f) + std::pow(baseY, 2.f) < std::pow(range, 2.f);
 	return result;
 }
 

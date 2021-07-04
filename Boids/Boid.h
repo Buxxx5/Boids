@@ -19,7 +19,7 @@ public:
 	void DefineDirection(std::vector<Boid> otherBoids);
 	void Move(float _delta);
 
-	bool IsInRange(Boid otherBoid);
+	bool IsInRange(Boid otherBoid, float range);
 	void SetPosition(sf::Vector2f newPosition);
 
 	//Cohesion, Alignment, and Separation.
